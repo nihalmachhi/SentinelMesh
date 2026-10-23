@@ -2,7 +2,7 @@
   <img src="assets/readme-icon.png" alt="SentinelMesh icon" width="112" />
 </p>
 
-# SentinelMesh
+<h1 align="center">SentinelMesh</h1>
 
 SentinelMesh is a local defensive investigation demo. It validates prepared network-flow JSON, applies explainable baseline rules, correlates findings into incidents, and produces an evidence-linked analyst report. It demonstrates the workflow without capturing traffic, calling an external model, or changing network controls.
 
