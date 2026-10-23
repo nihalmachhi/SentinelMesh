@@ -2,6 +2,22 @@
 
 SentinelMesh is a local defensive investigation demo. It validates prepared network-flow JSON, applies explainable baseline rules, correlates findings into incidents, and produces an evidence-linked analyst report. It demonstrates the workflow without capturing traffic, calling an external model, or changing network controls.
 
+## How it works
+
+SentinelMesh accepts prepared flow records and turns rule matches into evidence-linked incidents for a human reviewer.
+
+```mermaid
+flowchart LR
+  A[Prepared flow JSON] --> B[Validate and normalize]
+  B --> C[Explainable detection rules]
+  C --> D[Correlate findings into incidents]
+  D --> E[SQLite evidence store]
+  E --> F[Analyst report and local API]
+  F --> G[Dashboard]
+```
+
+Input bounds are checked before analysis. Detection keeps observed flow facts distinct from rule hypotheses; correlation groups related findings and preserves the evidence behind each incident. The interface is read-only: it does not capture traffic or change network controls.
+
 ## Run
 
 Requires Python 3.11+ and PowerShell on Windows.
@@ -33,6 +49,8 @@ Findings and scores are triage hints, not proof or calibrated probabilities. The
 - `frontend/`: local analyst dashboard.
 - `docs/`: design, safety, and workflow.
 - `scripts/`: PowerShell runner and illustrated guide generator.
-- `output/pdf/`: project walkthrough PDF.
+- `output/`: generated analysis artifacts; runtime databases are ignored by Git.
 
 See `docs/how-it-works.md` for the walkthrough and evaluation boundaries.
+
+
