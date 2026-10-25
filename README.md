@@ -11,18 +11,13 @@ SentinelMesh is a local defensive investigation demo. It validates prepared netw
 SentinelMesh accepts prepared flow records and turns rule matches into evidence-linked incidents for a human reviewer.
 
 ```mermaid
-flowchart TD
-  A[Prepared flow JSON] --> B[Input size and schema bounds]
-  B --> C[Normalize flow fields]
-  C --> D[Explainable detection rules]
-  D --> E[Finding with observed facts and rule rationale]
-  E --> F[Correlate related findings]
-  F --> G[Incident with linked evidence]
-  G --> H[(SQLite evidence and incident store)]
-  H --> I[Analyst report and local API]
-  I --> J[Dashboard for human review]
-  D -. no packet capture .-> K[Read-only investigation]
-  J --> K
+flowchart LR
+  A[Prepared flow JSON] --> B[Validate and normalize]
+  B --> C[Explainable detection rules]
+  C --> D[Correlate findings into incidents]
+  D --> E[SQLite evidence store]
+  E --> F[Analyst report and local API]
+  F --> G[Dashboard]
 ```
 
 Input bounds are checked before analysis. Detection keeps observed flow facts distinct from rule hypotheses; correlation groups related findings and preserves the evidence behind each incident. The interface is read-only: it does not capture traffic or change network controls.
