@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from sentinelmesh.models import Finding
-from sentinelmesh.store import Store
+from sentinelmesh.core.models import Finding
+from sentinelmesh.storage.sqlite import Store
 
 
 def test_findings_sort_by_severity_rank(tmp_path: Path):

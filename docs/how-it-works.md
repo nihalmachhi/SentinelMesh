@@ -1,19 +1,14 @@
 # How it works
 
-## Start
+1. **Start with flow JSON.** The deterministic fixture generator creates 600 synthetic rows under ignored `data/generated/`. Records contain metadata only; packet payloads are rejected.
+2. **Validate the boundary.** The parser enforces a 2 MB file size, a 20,000-row limit, unique flow IDs, known fields, timezone-aware timestamps, valid addresses, supported protocols, and bounded numeric values.
+3. **Apply explainable rules.** The current rules flag selected outbound service ports, configured high byte rates, and repeated destination-port activity within a five-minute window. They are heuristics, not a learned model.
+4. **Keep evidence attached.** Every finding references the source flow IDs and includes the observed values used by its rule. Correlation produces stable incident IDs from the evidence and endpoint information.
+5. **Persist a replayable import.** SQLite records each batch and prevents a changed record from silently reusing an existing flow ID. The audit log is append-only and hash chained.
+6. **Review locally.** The dashboard calls a loopback-only API. Read actions show stored evidence; write actions require the per-run bearer token and record simulated decisions only.
 
-Create a Python virtual environment, activate it, run `scripts/run.ps1 analyze`, then start the dashboard with `scripts/run.ps1 serve`. Open http://127.0.0.1:8000. The analyze command validates the bundled sample and repopulates the local SQLite evidence store.
+Run `python scripts/generate_sample_data.py` to create the sample, then `python -m sentinelmesh.cli analyze` to process it, then `python -m sentinelmesh.cli serve` to inspect it in the browser. See [architecture](architecture.md), [data contract](data-contract.md), and [safety](safety-and-data.md) for implementation boundaries.
 
-## Pipeline
+## Evaluation limits
 
-A JSON array becomes typed flow records. Input validation rejects malformed IPs, unsupported protocols, out-of-range ports, repeated IDs, and oversized inputs. The rules flag selected outbound sensitive service ports, high egress rate, and repeated multi-port activity. Every finding carries evidence flow IDs and observed feature values.
-
-Findings are grouped by source host. The incident explorer links directly to the original flows. The report helper uses a narrow, local read-only tool list and returns observed facts separately from hypotheses and recommended checks.
-
-## Human approval
-
-The dashboard can record a simulated mark-for-review or host-isolation action. It requires an analyst name and records the decision in an audit table. No packet, endpoint, firewall, or network state is modified.
-
-## Evaluation and limits
-
-Use the synthetic sample to inspect rules and output. To evaluate a model later, split captures by session/time, preserve label provenance, report precision/recall/F1 and PR-AUC where appropriate, and measure false positives at the stated threshold. This MVP has no labeled benchmark, learned classifier, LLM, production deployment, or performance claim. Do not infer real-world security efficacy from the demo.
+The bundled fixture is synthetic and designed to exercise code paths. It is not a benchmark, production traffic sample, or basis for an accuracy claim. No real labeled data has been evaluated, and no operational latency or throughput benchmark is reported.

@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
-from sentinelmesh.config import MAX_IMPORT_BYTES
-from sentinelmesh.models import Flow
+from sentinelmesh.core.config import MAX_IMPORT_BYTES
+from sentinelmesh.core.models import Flow
 
 REQUIRED = {
     "flow_id",

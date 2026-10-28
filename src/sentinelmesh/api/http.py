@@ -10,11 +10,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from sentinelmesh.assistant import investigate, propose_simulated_action
-from sentinelmesh.config import DB_PATH, MAX_IMPORT_BYTES, ROOT, SAMPLE_FLOWS
-from sentinelmesh.ingest import parse_flows
+from sentinelmesh.core.config import DB_PATH, MAX_IMPORT_BYTES, ROOT, SAMPLE_FLOWS
+from sentinelmesh.ingest.flows import parse_flows
+from sentinelmesh.investigation.tools import investigate, propose_simulated_action
 from sentinelmesh.pipeline import run_pipeline
-from sentinelmesh.store import Store
+from sentinelmesh.storage.sqlite import Store
 
 logger = logging.getLogger(__name__)
 FRONTEND = ROOT / "frontend" / "index.html"

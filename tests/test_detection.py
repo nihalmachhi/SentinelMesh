@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from sentinelmesh.detection import detect
-from sentinelmesh.ingest import parse_flow
+from sentinelmesh.detection.rules import detect
+from sentinelmesh.ingest.flows import parse_flow
 
 
 def test_multi_port_rule_uses_five_minute_window_and_expected_directions(flow_row):

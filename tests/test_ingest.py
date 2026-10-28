@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from sentinelmesh.ingest import load_flows, parse_flow
+from sentinelmesh.ingest.flows import load_flows, parse_flow
 
 
 def test_parse_flow_normalizes_timezone_to_utc(flow_row):

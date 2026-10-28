@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from sentinelmesh.assistant import call_tool, propose_simulated_action
-from sentinelmesh.correlate import correlate
-from sentinelmesh.store import Store
+from sentinelmesh.correlation.incidents import correlate
+from sentinelmesh.investigation.tools import call_tool, propose_simulated_action
+from sentinelmesh.storage.sqlite import Store
 
 
 def test_incident_ids_are_deterministic_and_source_destination_correlate(flow_row):

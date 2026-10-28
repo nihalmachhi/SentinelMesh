@@ -3,12 +3,12 @@
 from collections import defaultdict
 from datetime import UTC, datetime
 
-from sentinelmesh.config import (
+from sentinelmesh.core.config import (
     EGRESS_RATE_BYTES_PER_SECOND,
     MULTI_PORT_MINIMUM_PORTS,
     MULTI_PORT_WINDOW_SECONDS,
 )
-from sentinelmesh.models import Finding, Flow
+from sentinelmesh.core.models import Finding, Flow
 
 SENSITIVE_PORTS = {22: "SSH", 23: "Telnet", 3389: "RDP", 445: "SMB", 1433: "MSSQL"}
 

@@ -4,10 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
-from sentinelmesh.config import DB_PATH, SAMPLE_FLOWS
+from sentinelmesh.api.http import serve
+from sentinelmesh.core.config import DB_PATH, SAMPLE_FLOWS
 from sentinelmesh.service import analyze
-from sentinelmesh.store import Store
-from sentinelmesh.web import serve
+from sentinelmesh.storage.sqlite import Store
 
 
 def main() -> int:

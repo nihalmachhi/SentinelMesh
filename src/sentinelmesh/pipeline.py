@@ -2,10 +2,10 @@
 
 from typing import Any
 
-from sentinelmesh.correlate import correlate
-from sentinelmesh.detection import detect
-from sentinelmesh.models import Flow
-from sentinelmesh.store import Store
+from sentinelmesh.core.models import Flow
+from sentinelmesh.correlation.incidents import correlate
+from sentinelmesh.detection.rules import detect
+from sentinelmesh.storage.sqlite import Store
 
 
 def run_pipeline(flows: list[Flow], store: Store) -> dict[str, Any]:

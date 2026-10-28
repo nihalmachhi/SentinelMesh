@@ -8,7 +8,7 @@ import threading
 from email.message import Message
 from http.server import ThreadingHTTPServer
 
-from sentinelmesh import web
+from sentinelmesh.api import http as web
 
 
 def request(

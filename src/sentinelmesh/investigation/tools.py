@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from sentinelmesh.store import Store
+from sentinelmesh.storage.sqlite import Store
 
 
 def _get_incident(store: Store, key: str | None = None) -> Any:

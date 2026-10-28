@@ -1,26 +1,40 @@
-# Architecture
+# SentinelMesh architecture
 
-## Request path
+## Data path
 
-1. CLI or local dashboard receives prepared JSON flow records.
-2. Ingestion validates type, IP syntax, protocol, ports, counters, record count, and input size.
-3. Explainable rules emit findings with observed feature values and evidence flow IDs.
-4. Correlation groups findings by source host into an incident timeline.
-5. SQLite persists flow evidence, findings, incidents, analyst reports, simulated approvals, and audit events.
-6. The evidence-only investigator reads a narrow allow-list and labels evidence as observed facts and rule outputs as hypotheses.
-7. A loopback-only HTTP server exposes the dashboard API. Simulated actions require a named analyst and never change the network.
-
-## Component map
-
-```text
-JSON flow input -> validation -> baseline rules -> correlation -> SQLite
-                                                  |             |
-                                                  +-> investigator -> report
-                                                                |
-Dashboard <-------------- loopback API <------------------------+
-Analyst approval -> audit record (simulation only)
+```mermaid
+flowchart LR
+    CLI[CLI or dashboard] --> API[Input boundary]
+    API --> ING[Validate and normalize]
+    ING --> DET[Explainable rules]
+    DET --> COR[Evidence correlation]
+    COR --> DB[(SQLite)]
+    DB --> TOOLS[Read-only investigation tools]
+    TOOLS --> REPORT[Observed facts and hypotheses]
+    REPORT --> UI[Loopback dashboard]
+    UI --> REVIEW[Human review]
+    REVIEW --> AUDIT[Append-only simulated decision]
 ```
 
-## Technology decisions
+## Responsibilities
 
-Python standard library and SQLite keep the MVP reproducible without API keys, package installation, or service containers. The rule baseline makes each alert explainable. Prepared flow JSON provides a smaller and safer initial parsing surface than arbitrary packet capture. PostgreSQL, PCAP parsers, queues, external LLMs, and graph databases are future options only when measurable needs justify them.
+- `core`: immutable flow/finding contracts and paths/thresholds.
+- `ingest`: bounded JSON decoding, schema checks, timestamp normalization.
+- `detection`: deterministic baseline rules over validated records.
+- `correlation`: deterministic incident identity and evidence grouping.
+- `storage`: SQLite schema, append-only audit events, integrity verification, import batches.
+- `investigation`: strict tool allowlist and reports grounded in stored evidence.
+- `api`: loopback-only HTTP handling, dashboard assets, authorization and response headers.
+- `pipeline`, `service`, and `cli`: orchestration and command entry points.
+
+## Persistence and replay
+
+Every analysis is an import batch. Existing flow IDs are idempotent only when their content is unchanged; reusing an ID for different content is rejected. Reports, approvals, and audit events are retained across imports. The separate `reset-demo` command clears demo records but preserves the hash-chained audit history. SQLite triggers reject updates and deletes on audit rows, and verification fails closed if the chain is incomplete or inconsistent.
+
+## Trust boundaries
+
+Input JSON is untrusted. Size, record count, types, known keys, timestamps, addresses, ports, protocol, and counters are validated before rules run. HTTP state changes require a random bearer token issued at startup and same-origin loopback requests. The server binds to loopback only. The investigator has no shell, filesystem, or network tool. Simulated responses are not connected to real controls.
+
+## Deliberate constraints
+
+The project uses the Python standard library at runtime and SQLite for a single-process demonstration. There is no packet capture, payload parser, network sensor, external model, user database, distributed worker, or production deployment claim. New dependencies and services should be introduced only when a measured requirement needs them.
