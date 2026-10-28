@@ -6,5 +6,5 @@
 - Detection scores are fixed demo rule scores. They are not calibrated probabilities and do not establish attacker intent.
 - The assistant builds reports only from stored evidence and labels its reasoning as hypotheses. It has no shell or network-control tool.
 - A response action needs a named analyst and an allow-listed action; the record states simulated-only and network_changed=false.
-- SQLite database and reports can contain sensitive host metadata when users substitute real inputs. Keep data local, use lab data, control filesystem access, and delete generated output when no longer needed.
-- This demo has no authentication. Do not expose the server beyond localhost.
+- SQLite database and reports can contain sensitive host metadata when users substitute real inputs. Keep data local, use lab data, and control filesystem access. `sentinelmesh reset-demo` removes demo records but retains the append-only, hash-chained audit history.
+- The dashboard is loopback-only. Every POST requires a random per-run bearer token; the API also checks the Host and same-origin headers, requires JSON, and emits a restrictive CSP and X-Frame-Options. Keep the startup terminal private because it prints the active token.

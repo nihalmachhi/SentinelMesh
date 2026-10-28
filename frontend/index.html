@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SentinelMesh | Defensive investigations</title>
+<meta name="admin-token" content="__ADMIN_TOKEN__"><title>SentinelMesh | Defensive investigations</title>
 <style>
 :root{color-scheme:dark;font:15px/1.5 system-ui,sans-serif;background:#0b1220;color:#e7eef8;--panel:#121e31;--line:#263952;--muted:#9aabc0;--mint:#73dfbb;--amber:#f4c36a;--red:#fb827c}
 *{box-sizing:border-box}body{max-width:1180px;margin:32px auto;padding:0 22px}header{display:flex;justify-content:space-between;align-items:center;gap:20px}h1{margin:0;font-size:30px}h2{margin:28px 0 12px}.muted{color:var(--muted)}.badge{border:1px solid #37745f;color:var(--mint);border-radius:999px;padding:5px 10px;font-size:12px}
@@ -12,7 +12,7 @@
 <section id="metrics" class="metrics"></section><h2>Investigations</h2><section id="incidents"></section><h2>Recent flow evidence</h2><div class="card"><table><thead><tr><th>Flow</th><th>Source</th><th>Destination</th><th>Protocol</th><th>Bytes</th></tr></thead><tbody id="flows"></tbody></table></div>
 <script>
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n};
-async function api(path,opts){const r=await fetch(path,opts);const v=await r.json();if(!r.ok)throw Error(v.error||r.statusText);return v}
+async function api(path,opts={}){const headers=new Headers(opts.headers||{});if(opts.method==='POST')headers.set('Authorization','Bearer '+document.querySelector('meta[name="admin-token"]').content);const r=await fetch(path,{...opts,headers});const v=await r.json();if(!r.ok)throw Error(v.error||r.statusText);return v}
 async function refresh(){try{const [s,inc,flows]=await Promise.all([api('/api/summary'),api('/api/incidents'),api('/api/flows')]);
 const metrics=document.querySelector('#metrics');metrics.replaceChildren();[['Flows',s.flow_count],['Findings',s.finding_count],['Incidents',s.incident_count],['Reports',s.report_count],['Approved simulations',s.approval_count]].forEach(([k,v])=>{const c=el('article','card');c.append(el('div','muted',k),el('div','metric',String(v)));metrics.append(c)});
 const wrap=document.querySelector('#incidents');wrap.replaceChildren();inc.forEach(item=>{const c=el('article','card incident'),head=el('div','row'),left=el('div');head.append(left);left.append(el('strong','',item.incident_id+' ? '+item.host),el('div','muted',item.summary));head.append(el('span','severity '+item.severity,item.severity.toUpperCase()));c.append(head,el('p','muted','Linked flow IDs: '+item.evidence_ids.join(', ')));

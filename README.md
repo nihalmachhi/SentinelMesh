@@ -31,13 +31,14 @@ Requires Python 3.11+ and PowerShell on Windows.
     .\scripts\run.ps1 analyze
     .\scripts\run.ps1 serve
 
-Open http://127.0.0.1:8000. The server refuses non-loopback bind addresses.
+Open http://127.0.0.1:8000. The server prints a random bearer token at startup and injects it only into the local dashboard page. Keep the terminal private; POST requests require that token and same-origin loopback headers. Run `sentinelmesh reset-demo` only when you explicitly want to clear stored reports, approvals, and flow data; the hash-chained audit history remains.
 
 ## Input and commands
 
 - `analyze` loads `data/sample_flows.json`.
 - `analyze --input path\to\flows.json` analyzes a JSON array of flow objects.
-- `serve --port 8000` opens the local dashboard.
+- `serve --port 8000` opens the local dashboard and prints a per-run admin token.
+- `reset-demo` explicitly clears current demo records while preserving the append-only audit history.
 - `sentinelmesh analyze` works after `pip install -e .`.
 
 Input is limited to JSON flow records (2 MB on CLI; 2 MB per API request), 20,000 rows, known IP addresses, supported protocols, and bounded ports/counters. PCAP parsing is deliberately not enabled in this MVP.

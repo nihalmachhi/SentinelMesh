@@ -1,64 +1,205 @@
-"""Loopback-only dashboard API; no execution or network-control tools."""
-from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+"""Loopback-only API with per-run authorization and simulated actions."""
+
+from __future__ import annotations
+
+import hmac
 import json
-from urllib.parse import unquote,urlparse
-from sentinelmesh.assistant import investigate,propose_simulated_action
-from sentinelmesh.config import ROOT,DB_PATH,SAMPLE_FLOWS
-from sentinelmesh.ingest import parse_flow
+import logging
+import secrets
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
+from urllib.parse import unquote, urlparse
+
+from sentinelmesh.assistant import investigate, propose_simulated_action
+from sentinelmesh.config import DB_PATH, MAX_IMPORT_BYTES, ROOT, SAMPLE_FLOWS
+from sentinelmesh.ingest import parse_flows
 from sentinelmesh.pipeline import run_pipeline
 from sentinelmesh.store import Store
 
-FRONTEND=ROOT/"frontend"/"index.html"
-class Handler(BaseHTTPRequestHandler):
-    def reply(self,value,status=200,content_type="application/json; charset=utf-8"):
-        body=value if isinstance(value,bytes) else json.dumps(value,ensure_ascii=True).encode()
-        self.send_response(status);self.send_header("Content-Type",content_type)
-        self.send_header("X-Content-Type-Options","nosniff");self.send_header("Cache-Control","no-store")
-        self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body)
-    def do_GET(self):
-        path=urlparse(self.path).path
-        if path=="/":
-            self.reply(FRONTEND.read_bytes(),content_type="text/html; charset=utf-8");return
-        if path=="/api/health":self.reply({"status":"ok","mode":"synthetic-defense-lab"});return
-        if path=="/sample":self.reply(SAMPLE_FLOWS.read_bytes(),content_type="application/json");return
-        with Store(DB_PATH) as store:
-            if path=="/api/summary":self.reply(store.summary())
-            elif path=="/api/flows":self.reply(store.list_flows())
-            elif path=="/api/findings":self.reply(store.list_findings())
-            elif path=="/api/incidents":self.reply(store.list_incidents())
-            elif path.startswith("/api/incidents/"):
-                item=store.get_incident(unquote(path.rsplit("/",1)[-1]))
-                self.reply(item or {"error":"incident not found"},200 if item else 404)
-            else:self.reply({"error":"not found"},404)
-    def do_POST(self):
-        path=urlparse(self.path).path
-        try:
-            length=int(self.headers.get("Content-Length","0"))
-            if length > 2_000_000: self.reply({"error":"request exceeds 2 MB limit"},413);return
-            body=json.loads(self.rfile.read(length) or b"{}")
-            if path=="/api/analyze":
-                if not isinstance(body,list) or len(body)>20_000:raise ValueError("body must be a flow array with at most 20,000 records")
-                flows=[parse_flow(row) for row in body]
-                with Store(DB_PATH) as store:self.reply(run_pipeline(flows,store),201)
-                return
-            if not isinstance(body,dict):raise ValueError("request body must be a JSON object")
-            with Store(DB_PATH) as store:
-                if path.startswith("/api/incidents/") and path.endswith("/investigate"):
-                    incident_id=unquote(path.split("/")[-2]);self.reply(investigate(store,incident_id),201);return
-                if path.startswith("/api/incidents/") and path.endswith("/simulate"):
-                    incident_id=unquote(path.split("/")[-2])
-                    item=propose_simulated_action(store,incident_id,str(body.get("action","")),body.get("approved_by"))
-                    self.reply(item,201);return
-            self.reply({"error":"not found"},404)
-        except KeyError as exc:self.reply({"error":str(exc)},404)
-        except PermissionError as exc:self.reply({"error":str(exc)},403)
-        except (ValueError,TypeError,json.JSONDecodeError) as exc:self.reply({"error":str(exc)},400)
-    def log_message(self,fmt,*args):print(args[0]%args[1:])
+logger = logging.getLogger(__name__)
+FRONTEND = ROOT / "frontend" / "index.html"
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 
-def serve(host="127.0.0.1",port=8000):
-    if host not in {"127.0.0.1","localhost"}:raise ValueError("Dashboard binds to loopback only")
-    server=ThreadingHTTPServer((host,port),Handler)
-    print(f"SentinelMesh dashboard: http://{host}:{port} (synthetic lab only)")
-    try:server.serve_forever()
-    except KeyboardInterrupt:print("\nStopping SentinelMesh.")
-    finally:server.server_close()
+
+def _host_port(value: str) -> tuple[str | None, int | None]:
+    parsed = urlparse("//" + value)
+    try:
+        return parsed.hostname, parsed.port
+    except ValueError:
+        return None, None
+
+
+def create_handler(admin_token: str | None = None) -> type[BaseHTTPRequestHandler]:
+    token = admin_token or secrets.token_urlsafe(32)
+
+    class Handler(BaseHTTPRequestHandler):
+        def reply(
+            self,
+            value: Any,
+            status: int = 200,
+            content_type: str = "application/json; charset=utf-8",
+        ) -> None:
+            body = (
+                value
+                if isinstance(value, bytes)
+                else json.dumps(value, ensure_ascii=True).encode("utf-8")
+            )
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _request_origin_is_safe(self) -> bool:
+            host_value = self.headers.get("Host", "")
+            host, port = _host_port(host_value)
+            if host not in LOOPBACK_HOSTS:
+                return False
+            server_port = getattr(self.server, "server_port", None)
+            if server_port is not None and (port if port is not None else 80) != server_port:
+                return False
+            origin = self.headers.get("Origin")
+            if origin is None:
+                return True
+            parsed = urlparse(origin)
+            origin_host, origin_port = _host_port(parsed.netloc)
+            return (
+                parsed.scheme == "http"
+                and origin_host == host
+                and parsed.netloc.lower() == host_value.lower()
+                and (origin_port is None or server_port is None or origin_port == server_port)
+            )
+
+        def _authorized(self) -> bool:
+            supplied = self.headers.get("Authorization", "")
+            prefix = "Bearer "
+            return supplied.startswith(prefix) and hmac.compare_digest(
+                supplied[len(prefix) :], token
+            )
+
+        def do_GET(self) -> None:
+            try:
+                if not self._request_origin_is_safe():
+                    self.reply({"error": "request host or origin is not allowed"}, 403)
+                    return
+                path = urlparse(self.path).path
+                if path == "/":
+                    page = FRONTEND.read_text(encoding="utf-8").replace("__ADMIN_TOKEN__", token)
+                    self.reply(page.encode("utf-8"), content_type="text/html; charset=utf-8")
+                elif path == "/api/health":
+                    self.reply({"status": "ok", "mode": "synthetic-defense-lab"})
+                elif path == "/sample":
+                    self.reply(
+                        SAMPLE_FLOWS.read_bytes(),
+                        content_type="application/json; charset=utf-8",
+                    )
+                elif path.startswith("/api/"):
+                    with Store(DB_PATH) as store:
+                        if path == "/api/summary":
+                            self.reply(store.summary())
+                        elif path == "/api/flows":
+                            self.reply(store.list_flows())
+                        elif path == "/api/findings":
+                            self.reply(store.list_findings())
+                        elif path == "/api/incidents":
+                            self.reply(store.list_incidents())
+                        elif path.startswith("/api/incidents/"):
+                            item = store.get_incident(unquote(path.rsplit("/", 1)[-1]))
+                            self.reply(
+                                item or {"error": "incident not found"},
+                                200 if item else 404,
+                            )
+                        else:
+                            self.reply({"error": "not found"}, 404)
+                else:
+                    self.reply({"error": "not found"}, 404)
+            except Exception:
+                logger.exception("GET request failed")
+                self.reply({"error": "internal server error"}, 500)
+
+        def do_POST(self) -> None:
+            try:
+                if not self._request_origin_is_safe():
+                    self.reply({"error": "request host or origin is not allowed"}, 403)
+                    return
+                if not self._authorized():
+                    self.reply({"error": "valid bearer token required"}, 403)
+                    return
+                content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+                if content_type != "application/json":
+                    self.reply({"error": "Content-Type must be application/json"}, 415)
+                    return
+                raw_length = self.headers.get("Content-Length")
+                if raw_length is None or not raw_length.isascii() or not raw_length.isdigit():
+                    self.reply({"error": "Content-Length must be a non-negative integer"}, 400)
+                    return
+                length = int(raw_length)
+                if length <= 0:
+                    self.reply({"error": "request body must not be empty"}, 400)
+                    return
+                if length > MAX_IMPORT_BYTES:
+                    self.reply({"error": f"request exceeds {MAX_IMPORT_BYTES} byte limit"}, 413)
+                    return
+                raw_body = self.rfile.read(min(length, MAX_IMPORT_BYTES + 1))
+                if len(raw_body) != length or len(raw_body) > MAX_IMPORT_BYTES:
+                    self.reply({"error": "request body length is invalid"}, 400)
+                    return
+                body = json.loads(raw_body)
+                path = urlparse(self.path).path
+                if path == "/api/analyze":
+                    flows = parse_flows(body)
+                    with Store(DB_PATH) as store:
+                        self.reply(run_pipeline(flows, store), 201)
+                    return
+                if not isinstance(body, dict):
+                    raise ValueError("request body must be a JSON object")
+                with Store(DB_PATH) as store:
+                    if path.startswith("/api/incidents/") and path.endswith("/investigate"):
+                        incident_id = unquote(path.split("/")[-2])
+                        self.reply(investigate(store, incident_id), 201)
+                        return
+                    if path.startswith("/api/incidents/") and path.endswith("/simulate"):
+                        incident_id = unquote(path.split("/")[-2])
+                        item = propose_simulated_action(
+                            store,
+                            incident_id,
+                            str(body.get("action", "")),
+                            body.get("approved_by"),
+                        )
+                        self.reply(item, 201)
+                        return
+                self.reply({"error": "not found"}, 404)
+            except KeyError as exc:
+                self.reply({"error": str(exc)}, 404)
+            except PermissionError as exc:
+                self.reply({"error": str(exc)}, 403)
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                self.reply({"error": str(exc)}, 400)
+            except Exception:
+                logger.exception("POST request failed")
+                self.reply({"error": "internal server error"}, 500)
+
+        def log_message(self, fmt: str, *args: object) -> None:
+            logger.info("%s - %s", self.address_string(), fmt % args)
+
+    return Handler
+
+
+def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
+    if host not in LOOPBACK_HOSTS:
+        raise ValueError("Dashboard binds to loopback only")
+    token = secrets.token_urlsafe(32)
+    server = ThreadingHTTPServer((host, port), create_handler(token))
+    print(f"SentinelMesh dashboard: http://{host}:{server.server_port} (synthetic lab only)")
+    print(f"Per-run admin token (keep local): {token}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping SentinelMesh.")
+    finally:
+        server.server_close()
