@@ -30,7 +30,16 @@ jobs:
         run: python -m mypy src/sentinelmesh
       - name: Tests
         run: python -m pytest -q --cov=sentinelmesh --cov-report=term-missing
+      - name: Core coverage gate
+        run: python -m pytest -q --cov=sentinelmesh.core.models --cov=sentinelmesh.detection.rules --cov=sentinelmesh.correlation.incidents --cov=sentinelmesh.storage.sqlite --cov=sentinelmesh.ingest.flows --cov-fail-under=85
       - name: Generate synthetic smoke input
         run: python scripts/generate_sample_data.py
       - name: CLI smoke test
         run: sentinelmesh analyze
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build container image
+        run: docker build --tag sentinelmesh:ci .

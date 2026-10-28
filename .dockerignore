@@ -13,3 +13,6 @@ tmp
 tests
 data/generated/*
 !data/generated/.gitkeep
+data/samples/*.json
+data/samples/*.csv
+!data/samples/.gitkeep

@@ -140,3 +140,27 @@ def test_server_refuses_non_loopback_bind():
 
     with pytest.raises(ValueError, match="loopback"):
         web.serve("0.0.0.0", 8000)
+
+
+def test_metrics_endpoint_and_dashboard_token_is_not_embedded(monkeypatch, tmp_path):
+    monkeypatch.setattr(web, "DB_PATH", tmp_path / "metrics.sqlite3")
+    handler_type = web.create_handler("never-render-this-token")
+    instance = handler_type.__new__(handler_type)
+    instance.path = "/metrics"
+    instance.headers = Message()
+    instance.headers["Host"] = "127.0.0.1:8000"
+    instance.server = type("Server", (), {"server_port": 8000})()
+    result = []
+    instance.reply = lambda payload, status=200, content_type="application/json; charset=utf-8": (
+        result.append((payload, status, content_type))
+    )
+
+    instance.do_GET()
+    payload, status, content_type = result[0]
+    assert status == 200
+    assert "text/plain" in content_type
+    assert b"sentinelmesh_analysis_duration_ms" in payload
+
+    page = web.FRONTEND.read_text(encoding="utf-8")
+    assert "never-render-this-token" not in page
+    assert "__ADMIN_TOKEN__" not in page
