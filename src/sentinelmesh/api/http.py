@@ -6,6 +6,7 @@ import hmac
 import json
 import logging
 import secrets
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -13,6 +14,7 @@ from urllib.parse import unquote, urlparse
 from sentinelmesh.core.config import DB_PATH, MAX_IMPORT_BYTES, ROOT, SAMPLE_FLOWS
 from sentinelmesh.ingest.flows import parse_flows
 from sentinelmesh.investigation.tools import investigate, propose_simulated_action
+from sentinelmesh.metrics import PROCESS_METRICS
 from sentinelmesh.pipeline import run_pipeline
 from sentinelmesh.storage.sqlite import Store
 
@@ -45,6 +47,7 @@ def create_handler(admin_token: str | None = None) -> type[BaseHTTPRequestHandle
                 if isinstance(value, bytes)
                 else json.dumps(value, ensure_ascii=True).encode("utf-8")
             )
+            PROCESS_METRICS.request(self.command)
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
@@ -89,10 +92,14 @@ def create_handler(admin_token: str | None = None) -> type[BaseHTTPRequestHandle
                     return
                 path = urlparse(self.path).path
                 if path == "/":
-                    page = FRONTEND.read_text(encoding="utf-8").replace("__ADMIN_TOKEN__", token)
+                    page = FRONTEND.read_text(encoding="utf-8")
                     self.reply(page.encode("utf-8"), content_type="text/html; charset=utf-8")
                 elif path == "/api/health":
                     self.reply({"status": "ok", "mode": "synthetic-defense-lab"})
+                elif path == "/metrics":
+                    with Store(DB_PATH) as store:
+                        body = PROCESS_METRICS.render(store.summary()).encode("utf-8")
+                    self.reply(body, content_type="text/plain; version=0.0.4; charset=utf-8")
                 elif path == "/sample":
                     self.reply(
                         SAMPLE_FLOWS.read_bytes(),
@@ -102,8 +109,25 @@ def create_handler(admin_token: str | None = None) -> type[BaseHTTPRequestHandle
                     with Store(DB_PATH) as store:
                         if path == "/api/summary":
                             self.reply(store.summary())
+                        elif path == "/api/graph":
+                            from sentinelmesh.correlation.graph import graph_summary
+                            from sentinelmesh.ingest.flows import parse_flow
+
+                            try:
+                                flows = [parse_flow(row) for row in store.list_flows()]
+                                self.reply(graph_summary(flows))
+                            except RuntimeError as exc:
+                                self.reply({"error": str(exc)}, 503)
                         elif path == "/api/flows":
                             self.reply(store.list_flows())
+                        elif path.startswith("/api/flows/"):
+                            flow = store.get_flow(unquote(path.rsplit("/", 1)[-1]))
+                            self.reply(flow or {"error": "flow not found"}, 200 if flow else 404)
+                        elif path == "/api/drift":
+                            from sentinelmesh.core.models import Flow
+                            from sentinelmesh.drift import drift_report
+
+                            self.reply(drift_report([Flow(**item) for item in store.list_flows()]))
                         elif path == "/api/findings":
                             self.reply(store.list_findings())
                         elif path == "/api/incidents":
@@ -153,8 +177,11 @@ def create_handler(admin_token: str | None = None) -> type[BaseHTTPRequestHandle
                 path = urlparse(self.path).path
                 if path == "/api/analyze":
                     flows = parse_flows(body)
+                    started = time.perf_counter()
                     with Store(DB_PATH) as store:
-                        self.reply(run_pipeline(flows, store), 201)
+                        result = run_pipeline(flows, store)
+                        PROCESS_METRICS.analysis((time.perf_counter() - started) * 1000)
+                        self.reply(result, 201)
                     return
                 if not isinstance(body, dict):
                     raise ValueError("request body must be a JSON object")

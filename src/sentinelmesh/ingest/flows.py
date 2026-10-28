@@ -62,9 +62,9 @@ def parse_flow(item: Any) -> Flow:
         or not 0 <= duration <= 86_400_000
     ):
         raise ValueError("duration_ms must be a non-negative finite-range number")
-    direction = str(item.get("direction", "outbound"))
-    if direction not in {"inbound", "outbound", "internal"}:
-        raise ValueError("direction must be inbound, outbound, or internal")
+    direction = str(item.get("direction", "unknown"))
+    if direction not in {"inbound", "outbound", "internal", "unknown"}:
+        raise ValueError("direction must be inbound, outbound, internal, or unknown")
     timestamp = item["timestamp"]
     if not isinstance(timestamp, str):
         raise ValueError("timestamp must be an ISO-8601 string with a timezone")

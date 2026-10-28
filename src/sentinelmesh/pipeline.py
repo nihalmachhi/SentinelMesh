@@ -4,13 +4,18 @@ from typing import Any
 
 from sentinelmesh.core.models import Flow
 from sentinelmesh.correlation.incidents import correlate
+from sentinelmesh.detection.attack import mapping_for
 from sentinelmesh.detection.rules import detect
 from sentinelmesh.storage.sqlite import Store
 
 
 def run_pipeline(flows: list[Flow], store: Store) -> dict[str, Any]:
     flow_dicts = [f.to_dict() for f in flows]
-    findings = [f.to_dict() for f in detect(flows)]
+    findings = []
+    for finding in detect(flows):
+        record = finding.to_dict()
+        record["attack_mapping"] = mapping_for(finding.rule_id)
+        findings.append(record)
     by_id = {f["flow_id"]: f for f in flow_dicts}
     incidents = correlate(findings, by_id)
     store.import_batch(flow_dicts, findings, incidents)
