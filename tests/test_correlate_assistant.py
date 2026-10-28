@@ -54,3 +54,26 @@ def test_correlation_merges_shared_hosts_and_overlapping_windows(flow_row):
     assert len(merged) == 1
     assert merged[0]["severity"] == "high"
     assert merged[0]["finding_count"] == 2
+
+
+def test_simulated_approval_is_linked_to_latest_report_and_expires(tmp_path):
+    import json
+    from datetime import datetime
+
+    with Store(tmp_path / "db.sqlite3") as store:
+        store.db.execute(
+            "INSERT INTO incidents VALUES(?,?,?)",
+            ("inc-2", "open", json.dumps({"incident_id": "inc-2", "severity": "low"})),
+        )
+        report = {
+            "report_id": "report-2",
+            "incident_id": "inc-2",
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+        store.record_report(report)
+        approval = propose_simulated_action(store, "inc-2", "mark_for_review", "Nihal")
+    assert approval["report_id"] == "report-2"
+    assert approval["role"] == "analyst"
+    expires = datetime.fromisoformat(approval["expires_at"])
+    created = datetime.fromisoformat(approval["created_at"])
+    assert (expires - created).total_seconds() == 1800

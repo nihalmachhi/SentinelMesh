@@ -107,3 +107,14 @@ def test_legacy_audit_history_is_anchored_and_detectable(tmp_path: Path):
         store.db.execute("DROP TRIGGER audit_events_no_update")
         store.db.execute("UPDATE audit_events SET payload='tampered' WHERE event_id='old-1'")
         assert not store.verify_audit_chain()
+
+
+def test_audit_export_verifies_chain_and_writes_jsonl(tmp_path):
+    output = tmp_path / "audit.jsonl"
+    with Store(tmp_path / "store.sqlite3") as store:
+        store.import_batch([], [], [])
+        count = store.export_audit(output)
+    rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
+    assert count == len(rows) == 1
+    assert rows[0]["event_type"] == "import_batch"
+    assert rows[0]["event_hash"]

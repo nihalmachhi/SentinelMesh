@@ -225,6 +225,28 @@ class Store:
         row = self.db.execute("SELECT payload FROM flows WHERE flow_id=?", (flow_id,)).fetchone()
         return json.loads(row["payload"]) if row else None
 
+    def latest_report(self, incident_id: str) -> dict[str, Any] | None:
+        row = self.db.execute(
+            "SELECT payload FROM reports WHERE incident_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1",
+            (incident_id,),
+        ).fetchone()
+        return json.loads(row["payload"]) if row else None
+
+    def export_audit(self, path: Path) -> int:
+        if not self.verify_audit_chain():
+            raise ValueError("audit chain verification failed; refusing export")
+        rows = self.db.execute(
+            "SELECT event_id,created_at,event_type,payload,previous_hash,event_hash FROM audit_events ORDER BY rowid"
+        ).fetchall()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "".join(
+                json.dumps(dict(row), sort_keys=True, separators=(",", ":")) + "\n" for row in rows
+            ),
+            encoding="utf-8",
+        )
+        return len(rows)
+
     def has_report(self, incident_id: str) -> bool:
         return (
             self.db.execute(
