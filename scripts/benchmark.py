@@ -1,4 +1,4 @@
-"""Measure validation, detection, and correlation on the bundled sample."""
+"""Measure validation, detection, and correlation on the locally generated sample."""
 
 from __future__ import annotations
 

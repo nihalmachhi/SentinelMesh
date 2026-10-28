@@ -18,4 +18,7 @@ outputs/
 tmp/
 data/generated/*
 !data/generated/.gitkeep
+data/samples/*.json
+data/samples/*.csv
+!data/samples/.gitkeep
 .DS_Store

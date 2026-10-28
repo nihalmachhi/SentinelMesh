@@ -1,13 +1,24 @@
 """Project paths and safe demo defaults."""
 
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 DATA = ROOT / "data"
 GENERATED = DATA / "generated"
-DB_PATH = GENERATED / "sentinelmesh.sqlite3"
-SAMPLE_FLOWS = GENERATED / "sample_flows.json"
+DB_PATH = Path(
+    os.environ.get("SENTINELMESH_DB_PATH", GENERATED / "sentinelmesh.sqlite3")
+).expanduser()
+SAMPLES = ROOT / "data" / "samples"
+SAMPLE_FLOWS = SAMPLES / "sample_flows.json"
 MAX_IMPORT_BYTES = 2_000_000
 EGRESS_RATE_BYTES_PER_SECOND = 25_000_000
 MULTI_PORT_WINDOW_SECONDS = 300
 MULTI_PORT_MINIMUM_PORTS = 5
+BASELINE_WINDOW_SIZE = 50
+BASELINE_MIN_HISTORY = 5
+BASELINE_Z_SCORE_THRESHOLD = 3.0
+BEACON_MIN_FLOWS = 6
+BEACON_MIN_INTERVAL_SECONDS = 30
+BEACON_MAX_INTERVAL_SECONDS = 3600
+BEACON_MAX_COEFFICIENT_OF_VARIATION = 0.05

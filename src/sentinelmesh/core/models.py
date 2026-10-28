@@ -17,7 +17,7 @@ class Flow:
     duration_ms: float
     packets: int
     bytes_sent: int
-    direction: str = "outbound"
+    direction: str = "unknown"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
