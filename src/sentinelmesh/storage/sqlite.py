@@ -5,21 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import threading
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 
-SCHEMA = """
-PRAGMA foreign_keys=ON;
-CREATE TABLE IF NOT EXISTS flows(flow_id TEXT PRIMARY KEY, payload TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS findings(finding_id TEXT PRIMARY KEY, rule_id TEXT NOT NULL, severity TEXT NOT NULL, payload TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS incidents(incident_id TEXT PRIMARY KEY, status TEXT NOT NULL, payload TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS reports(report_id TEXT PRIMARY KEY, incident_id TEXT NOT NULL, created_at TEXT NOT NULL, payload TEXT NOT NULL, FOREIGN KEY(incident_id) REFERENCES incidents(incident_id));
-CREATE TABLE IF NOT EXISTS approvals(approval_id TEXT PRIMARY KEY, incident_id TEXT NOT NULL, decision TEXT NOT NULL, created_at TEXT NOT NULL, payload TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS import_batches(batch_id TEXT PRIMARY KEY, created_at TEXT NOT NULL, flow_count INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS audit_events(event_id TEXT PRIMARY KEY, created_at TEXT NOT NULL, event_type TEXT NOT NULL, payload TEXT NOT NULL, previous_hash TEXT NOT NULL DEFAULT '', event_hash TEXT NOT NULL DEFAULT '');
-"""
+from sentinelmesh.storage.schema import SCHEMA
 
 
 def _json(value: Any) -> str:
@@ -27,20 +19,27 @@ def _json(value: Any) -> str:
 
 
 class Store:
+    _initialized: ClassVar[set[Path]] = set()
+    _schema_lock: ClassVar[threading.Lock] = threading.Lock()
+
     def __init__(self, path: Path):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(path)
+        self.path = path.expanduser().resolve()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.db = sqlite3.connect(self.path)
         self.db.row_factory = sqlite3.Row
+        with self._schema_lock:
+            if self.path not in self._initialized:
+                self._initialize_schema()
+                self._initialized.add(self.path)
+
+    def _initialize_schema(self) -> None:
         self.db.executescript(SCHEMA)
         columns = {row["name"] for row in self.db.execute("PRAGMA table_info(audit_events)")}
-        if "previous_hash" not in columns:
-            self.db.execute(
-                "ALTER TABLE audit_events ADD COLUMN previous_hash TEXT NOT NULL DEFAULT ''"
-            )
-        if "event_hash" not in columns:
-            self.db.execute(
-                "ALTER TABLE audit_events ADD COLUMN event_hash TEXT NOT NULL DEFAULT ''"
-            )
+        for column in ("previous_hash", "event_hash"):
+            if column not in columns:
+                self.db.execute(
+                    f"ALTER TABLE audit_events ADD COLUMN {column} TEXT NOT NULL DEFAULT ''"
+                )
         self.db.executescript("""
         CREATE TRIGGER IF NOT EXISTS audit_events_no_update
         BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
@@ -59,89 +58,19 @@ class Store:
         self.close()
 
     def _append_audit(self, event_id: str, created_at: str, event_type: str, payload: Any) -> None:
-        previous = self.db.execute(
-            "SELECT event_hash FROM audit_events WHERE event_hash != '' ORDER BY rowid DESC LIMIT 1"
-        ).fetchone()
-        previous_hash = previous["event_hash"] if previous else "0" * 64
-        encoded_payload = _json(payload)
-        signed = f"{previous_hash}\0{event_id}\0{created_at}\0{event_type}\0{encoded_payload}"
-        event_hash = hashlib.sha256(signed.encode("utf-8")).hexdigest()
-        self.db.execute(
-            "INSERT INTO audit_events(event_id,created_at,event_type,payload,previous_hash,event_hash) VALUES(?,?,?,?,?,?)",
-            (
-                event_id,
-                created_at,
-                event_type,
-                encoded_payload,
-                previous_hash,
-                event_hash,
-            ),
-        )
+        from sentinelmesh.storage.audit import append_audit
+
+        append_audit(self.db, event_id, created_at, event_type, payload)
 
     def _anchor_legacy_audit(self) -> None:
-        legacy = self.db.execute(
-            "SELECT event_id,created_at,event_type,payload FROM audit_events WHERE event_hash='' ORDER BY rowid"
-        ).fetchall()
-        if not legacy:
-            return
-        legacy_values = [
-            [row[key] for key in ("event_id", "created_at", "event_type", "payload")]
-            for row in legacy
-        ]
-        legacy_digest = hashlib.sha256(_json(legacy_values).encode("utf-8")).hexdigest()
-        event_id = "legacy-baseline-" + legacy_digest[:24]
-        if self.db.execute("SELECT 1 FROM audit_events WHERE event_id=?", (event_id,)).fetchone():
-            return
-        stamp = datetime.now(UTC).isoformat()
-        with self.db:
-            self._append_audit(
-                event_id,
-                stamp,
-                "legacy_audit_baseline",
-                {
-                    "legacy_count": len(legacy_values),
-                    "legacy_digest": legacy_digest,
-                },
-            )
+        from sentinelmesh.storage.audit import anchor_legacy_audit
+
+        anchor_legacy_audit(self.db)
 
     def verify_audit_chain(self) -> bool:
-        previous_hash = "0" * 64
-        legacy_values: list[list[str]] = []
-        baseline_seen = False
-        rows = self.db.execute(
-            "SELECT event_id,created_at,event_type,payload,previous_hash,event_hash FROM audit_events ORDER BY rowid"
-        )
-        for row in rows:
-            if not row["event_hash"] and not row["previous_hash"]:
-                legacy_values.append(
-                    [row[key] for key in ("event_id", "created_at", "event_type", "payload")]
-                )
-                continue
-            try:
-                payload = json.loads(row["payload"])
-            except json.JSONDecodeError:
-                return False
-            if row["event_type"] == "legacy_audit_baseline":
-                actual_digest = hashlib.sha256(_json(legacy_values).encode("utf-8")).hexdigest()
-                if payload != {"legacy_count": len(legacy_values), "legacy_digest": actual_digest}:
-                    return False
-                baseline_seen = True
-            elif legacy_values and not baseline_seen:
-                return False
-            signed = "\0".join(
-                (
-                    previous_hash,
-                    row["event_id"],
-                    row["created_at"],
-                    row["event_type"],
-                    row["payload"],
-                )
-            )
-            expected = hashlib.sha256(signed.encode("utf-8")).hexdigest()
-            if row["previous_hash"] != previous_hash or row["event_hash"] != expected:
-                return False
-            previous_hash = row["event_hash"]
-        return not legacy_values or baseline_seen
+        from sentinelmesh.storage.audit import verify_audit_chain
+
+        return verify_audit_chain(self.db)
 
     def import_batch(
         self,

@@ -21,10 +21,6 @@ def _is_internal(address: str) -> bool:
     return any(value in net for net in _PRIVATE_NETWORKS if value.version == net.version)
 
 
-def _seconds(timestamp: str) -> float:
-    return datetime.fromisoformat(timestamp).astimezone(UTC).timestamp()
-
-
 def graph_summary(flows: list[Flow]) -> dict[str, Any]:
     """Summarize communication links, hubs, components, and candidate paths."""
     try:
@@ -37,7 +33,7 @@ def graph_summary(flows: list[Flow]) -> dict[str, Any]:
     for flow in flows:
         source = flow.src_ip
         destination = flow.dst_ip
-        stamp = _seconds(flow.timestamp)
+        stamp = flow.timestamp_seconds
         if graph.has_edge(source, destination):
             edge = graph[source][destination]
             edge["flow_count"] += 1

@@ -9,6 +9,7 @@ from email.message import Message
 from http.server import ThreadingHTTPServer
 
 from sentinelmesh.api import http as web
+from sentinelmesh.api import routes, server
 
 
 def request(
@@ -61,7 +62,7 @@ def test_post_rejects_empty_and_invalid_lengths():
 
 def test_non_dict_row_and_unexpected_errors_return_json(monkeypatch, tmp_path, flow_row):
     handler = web.create_handler("secret")
-    monkeypatch.setattr(web, "DB_PATH", tmp_path / "db.sqlite3")
+    monkeypatch.setattr(routes, "DB_PATH", tmp_path / "db.sqlite3")
     payload, status, content = request(handler, body=json.dumps(["not an object"]).encode())
     assert status == 400 and content.startswith("application/json")
     assert "JSON object" in payload["error"]
@@ -72,7 +73,7 @@ def test_non_dict_row_and_unexpected_errors_return_json(monkeypatch, tmp_path, f
         def __init__(self, path):
             raise RuntimeError("database unavailable")
 
-    monkeypatch.setattr(web, "Store", BrokenStore)
+    monkeypatch.setattr(routes, "Store", BrokenStore)
     instance = handler.__new__(handler)
     instance.path = "/api/incidents"
     instance.headers = Message()
@@ -91,7 +92,7 @@ def test_non_dict_row_and_unexpected_errors_return_json(monkeypatch, tmp_path, f
 def test_request_logging_uses_format_string(caplog):
     handler = web.create_handler("secret").__new__(web.create_handler("secret"))
     handler.address_string = lambda: "127.0.0.1"
-    with caplog.at_level(logging.INFO, logger=web.__name__):
+    with caplog.at_level(logging.INFO, logger=server.logger.name):
         handler.log_message("%s %s", "GET", "/api/health")
     assert "GET /api/health" in caplog.text
 
@@ -107,7 +108,18 @@ def test_real_loopback_server_enforces_auth_and_sets_security_headers():
         response = connection.getresponse()
         assert response.status == 200
         assert response.getheader("X-Frame-Options") == "DENY"
-        assert "frame-ancestors 'none'" in response.getheader("Content-Security-Policy")
+        policy = response.getheader("Content-Security-Policy")
+        assert "frame-ancestors 'none'" in policy
+        assert "unsafe-inline" not in policy
+        response.read()
+
+        connection.request("GET", "/api/version")
+        response = connection.getresponse()
+        assert response.status == 200 and json.loads(response.read())["name"] == "sentinelmesh"
+
+        connection.request("GET", "/static/app.js")
+        response = connection.getresponse()
+        assert response.status == 200 and "javascript" in response.getheader("Content-Type")
         response.read()
 
         headers = {"Content-Type": "application/json", "Authorization": "Bearer integration-token"}
@@ -143,7 +155,7 @@ def test_server_refuses_non_loopback_bind():
 
 
 def test_metrics_endpoint_and_dashboard_token_is_not_embedded(monkeypatch, tmp_path):
-    monkeypatch.setattr(web, "DB_PATH", tmp_path / "metrics.sqlite3")
+    monkeypatch.setattr(routes, "DB_PATH", tmp_path / "metrics.sqlite3")
     handler_type = web.create_handler("never-render-this-token")
     instance = handler_type.__new__(handler_type)
     instance.path = "/metrics"
@@ -164,3 +176,10 @@ def test_metrics_endpoint_and_dashboard_token_is_not_embedded(monkeypatch, tmp_p
     page = web.FRONTEND.read_text(encoding="utf-8")
     assert "never-render-this-token" not in page
     assert "__ADMIN_TOKEN__" not in page
+
+
+def test_route_table_serves_version_assets_and_strict_csp():
+    assert web.resolve_route("GET", "/api/version") is not None
+    assert web.resolve_route("PATCH", "/api/version") is None
+    assert "unsafe-inline" not in web.CONTENT_SECURITY_POLICY
+    assert "/static/app.js" in routes.STATIC
