@@ -8,10 +8,11 @@ import logging
 import secrets
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib.resources import files
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from sentinelmesh.core.config import DB_PATH, MAX_IMPORT_BYTES, ROOT, SAMPLE_FLOWS
+from sentinelmesh.core.config import DB_PATH, MAX_IMPORT_BYTES, SAMPLE_FLOWS
 from sentinelmesh.ingest.flows import parse_flows
 from sentinelmesh.investigation.tools import investigate, propose_simulated_action
 from sentinelmesh.metrics import PROCESS_METRICS
@@ -19,9 +20,11 @@ from sentinelmesh.pipeline import run_pipeline
 from sentinelmesh.storage.sqlite import Store
 
 logger = logging.getLogger(__name__)
-FRONTEND = ROOT / "frontend" / "index.html"
+WEB = files("sentinelmesh.web")
+FRONTEND = WEB.joinpath("index.html")
+STATIC = {"/static/styles.css": (WEB.joinpath("static", "styles.css"), "text/css; charset=utf-8"), "/static/app.js": (WEB.joinpath("static", "app.js"), "text/javascript; charset=utf-8")}
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
-CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 
 
 def _host_port(value: str) -> tuple[str | None, int | None]:
@@ -94,6 +97,9 @@ def create_handler(admin_token: str | None = None) -> type[BaseHTTPRequestHandle
                 if path == "/":
                     page = FRONTEND.read_text(encoding="utf-8")
                     self.reply(page.encode("utf-8"), content_type="text/html; charset=utf-8")
+                elif path in STATIC:
+                    asset, content_type = STATIC[path]
+                    self.reply(asset.read_bytes(), content_type=content_type)
                 elif path == "/api/health":
                     self.reply({"status": "ok", "mode": "synthetic-defense-lab"})
                 elif path == "/metrics":

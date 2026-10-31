@@ -38,3 +38,6 @@ testpaths = ["tests"]
 [tool.coverage.run]
 branch = true
 source = ["sentinelmesh"]
+
+[tool.setuptools.package-data]
+"sentinelmesh.web" = ["index.html", "static/*.css", "static/*.js"]

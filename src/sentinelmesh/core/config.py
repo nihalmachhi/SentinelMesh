@@ -3,13 +3,10 @@
 import os
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-DATA = ROOT / "data"
+DATA = Path(os.environ.get("SENTINELMESH_DATA_DIR", Path.cwd() / "data")).expanduser().resolve()
 GENERATED = DATA / "generated"
-DB_PATH = Path(
-    os.environ.get("SENTINELMESH_DB_PATH", GENERATED / "sentinelmesh.sqlite3")
-).expanduser()
-SAMPLES = ROOT / "data" / "samples"
+DB_PATH = Path(os.environ.get("SENTINELMESH_DB_PATH", GENERATED / "sentinelmesh.sqlite3")).expanduser().resolve()
+SAMPLES = DATA / "samples"
 SAMPLE_FLOWS = SAMPLES / "sample_flows.json"
 MAX_IMPORT_BYTES = 2_000_000
 EGRESS_RATE_BYTES_PER_SECOND = 25_000_000

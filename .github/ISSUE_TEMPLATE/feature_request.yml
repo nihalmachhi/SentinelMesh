@@ -1,0 +1,9 @@
+name: Feature request
+description: Suggest a scoped improvement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and proposed change
+    validations:
+      required: true

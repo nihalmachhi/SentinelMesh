@@ -5,13 +5,14 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import random
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
-SAMPLES = ROOT / "data" / "samples"
+DATA = Path(os.environ.get("SENTINELMESH_DATA_DIR", Path.cwd() / "data")).expanduser()
+SAMPLES = DATA / "samples"
 DEFAULT_OUTPUT = SAMPLES / "sample_flows.json"
 DEFAULT_LABELS = SAMPLES / "scenario_labels.csv"
 BASE_TIME = datetime(2025, 1, 1, tzinfo=UTC)
