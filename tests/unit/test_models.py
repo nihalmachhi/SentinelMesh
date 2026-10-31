@@ -2,7 +2,6 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from sentinelmesh.core.models import Flow
 from sentinelmesh.detection.config import DetectionConfig
 from sentinelmesh.ingest.flows import parse_flow
 

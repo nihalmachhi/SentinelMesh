@@ -25,7 +25,7 @@ def run_pipeline(flows: list[Flow], store: Store) -> dict[str, Any]:
         "incidents": len(incidents),
         "severity_counts": {
             level: sum(1 for item in findings if item["severity"] == level)
-            for level in ("low", "medium", "high")
+            for level in ("low", "medium", "high", "critical")
         },
         "note": "Rule scores are triage signals, not calibrated probabilities.",
     }

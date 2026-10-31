@@ -43,17 +43,58 @@ def test_simulated_action_requires_existing_report(tmp_path):
             raise AssertionError("action was accepted without a report")
 
 
-def test_correlation_merges_shared_hosts_and_overlapping_windows(flow_row):
-    first = {**flow_row, "flow_id": "first"}
-    second = {**flow_row, "flow_id": "second", "src_ip": "10.0.0.2", "dst_ip": "198.51.100.9"}
+def test_unrelated_hosts_with_overlapping_times_stay_separate(flow_row):
+    first = {**flow_row, "flow_id": "first", "src_ip": "10.0.0.1", "dst_ip": "198.51.100.1"}
+    second = {**flow_row, "flow_id": "second", "src_ip": "10.0.0.2", "dst_ip": "198.51.100.2"}
     items = [
-        {"finding_id": "a", "severity": "medium", "summary": "a", "evidence_ids": ["first"]},
-        {"finding_id": "b", "severity": "high", "summary": "b", "evidence_ids": ["second"]},
+        {"finding_id": "a", "severity": "medium", "evidence_ids": ["first"]},
+        {"finding_id": "b", "severity": "high", "evidence_ids": ["second"]},
+    ]
+    assert len(correlate(items, {"first": first, "second": second})) == 2
+
+
+def test_same_host_findings_within_proximity_merge(flow_row):
+    first = {
+        **flow_row,
+        "flow_id": "first",
+        "src_ip": "10.0.0.1",
+        "timestamp": "2026-10-10T08:00:00Z",
+    }
+    second = {
+        **flow_row,
+        "flow_id": "second",
+        "src_ip": "10.0.0.1",
+        "timestamp": "2026-10-10T08:04:00Z",
+    }
+    items = [
+        {"finding_id": "a", "severity": "medium", "evidence_ids": ["first"]},
+        {"finding_id": "b", "severity": "high", "evidence_ids": ["second"]},
     ]
     merged = correlate(items, {"first": first, "second": second})
     assert len(merged) == 1
     assert merged[0]["severity"] == "high"
-    assert merged[0]["finding_count"] == 2
+    assert merged[0]["window_start"].endswith("Z")
+    assert merged[0]["window_end"].endswith("Z")
+
+
+def test_same_host_findings_far_apart_stay_separate(flow_row):
+    first = {
+        **flow_row,
+        "flow_id": "first",
+        "src_ip": "10.0.0.1",
+        "timestamp": "2026-10-10T08:00:00Z",
+    }
+    second = {
+        **flow_row,
+        "flow_id": "second",
+        "src_ip": "10.0.0.1",
+        "timestamp": "2026-10-10T08:06:00Z",
+    }
+    items = [
+        {"finding_id": "a", "severity": "medium", "evidence_ids": ["first"]},
+        {"finding_id": "b", "severity": "high", "evidence_ids": ["second"]},
+    ]
+    assert len(correlate(items, {"first": first, "second": second})) == 2
 
 
 def test_simulated_approval_is_linked_to_latest_report_and_expires(tmp_path):
