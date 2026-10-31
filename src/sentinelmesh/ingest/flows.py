@@ -3,12 +3,12 @@
 import ipaddress
 import json
 import math
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
 from sentinelmesh.core.config import MAX_IMPORT_BYTES
 from sentinelmesh.core.models import Flow
+from sentinelmesh.core.timeutil import parse_utc
 
 REQUIRED = {
     "flow_id",
@@ -69,12 +69,9 @@ def parse_flow(item: Any) -> Flow:
     if not isinstance(timestamp, str):
         raise ValueError("timestamp must be an ISO-8601 string with a timezone")
     try:
-        parsed_timestamp = datetime.fromisoformat(timestamp)
+        normalized_timestamp = parse_utc(timestamp).isoformat().replace("+00:00", "Z")
     except ValueError as exc:
         raise ValueError("timestamp must be an ISO-8601 string with a timezone") from exc
-    if parsed_timestamp.tzinfo is None or parsed_timestamp.utcoffset() is None:
-        raise ValueError("timestamp must include a timezone offset")
-    normalized_timestamp = parsed_timestamp.astimezone(UTC).isoformat().replace("+00:00", "Z")
     return Flow(
         flow_id=item["flow_id"].strip(),
         timestamp=normalized_timestamp,
