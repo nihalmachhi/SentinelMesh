@@ -1,19 +1,50 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="SentinelMesh is a local, evidence-first network-flow investigation lab.">
-<title>SentinelMesh — Read the signal. Keep the evidence.</title>
-<style>
-:root{color-scheme:dark;--bg:#080d14;--panel:#101a27;--line:#26374a;--ink:#eef5fc;--muted:#a1b3c6;--mint:#76e4bd;--violet:#a48cff;--amber:#f0c575;font:16px/1.6 Inter,ui-sans-serif,system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 72% 0,#172638 0,transparent 36rem),var(--bg);color:var(--ink)}a{color:inherit}main{max-width:1120px;margin:auto;padding:32px 24px 80px}.nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding:8px 0 22px}.brand{display:flex;gap:12px;align-items:center;font-weight:700;letter-spacing:.08em}.mark{width:34px;height:34px;border:1px solid var(--mint);border-radius:10px;display:grid;place-items:center;color:var(--mint);font-size:20px}.nav a,.button{font-size:14px;text-decoration:none;color:var(--muted)}.hero{padding:92px 0 68px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}.eyebrow{color:var(--mint);font-size:12px;letter-spacing:.22em;text-transform:uppercase}.hero h1{font-size:clamp(42px,6vw,72px);line-height:1.04;letter-spacing:-.045em;margin:18px 0}.hero p{max-width:590px;color:var(--muted);font-size:18px}.actions{display:flex;gap:12px;align-items:center;margin-top:28px}.button{padding:11px 16px;border:1px solid var(--line);border-radius:9px}.button.primary{background:var(--mint);color:#092018;border-color:var(--mint);font-weight:700}.diagram{padding:20px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#132235,#0c141f);box-shadow:0 22px 70px #0005}.diagram small{color:var(--muted);letter-spacing:.15em;text-transform:uppercase}.flow{display:grid;gap:10px;margin-top:18px}.node{padding:13px 15px;border:1px solid #31475c;border-radius:10px;background:#0c1521}.node b{display:block;font-size:14px}.node span{font-size:12px;color:var(--muted)}.arrow{text-align:center;color:var(--mint);height:12px;line-height:12px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.section{padding:44px 0;border-top:1px solid var(--line)}.section h2{font-size:26px;margin:0 0 10px;letter-spacing:-.025em}.section>p{color:var(--muted);max-width:740px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}.card{border:1px solid var(--line);background:var(--panel);border-radius:13px;padding:20px}.card .num{color:var(--violet);font-size:12px;letter-spacing:.14em}.card h3{margin:10px 0 5px;font-size:17px}.card p{margin:0;color:var(--muted);font-size:14px}.tag{display:inline-block;border:1px solid #355246;color:var(--mint);border-radius:99px;padding:4px 10px;margin:5px 6px 0 0;font-size:12px}.safety{border-left:3px solid var(--amber);padding:15px 18px;background:#19180f;color:#e6d6b3;border-radius:0 10px 10px 0}.foot{display:flex;justify-content:space-between;gap:16px;color:var(--muted);font-size:13px;margin-top:54px;padding-top:22px;border-top:1px solid var(--line)}@media(max-width:800px){.hero{grid-template-columns:1fr;padding-top:60px}.grid{grid-template-columns:1fr 1fr}.nav .links{display:none}}@media(max-width:520px){main{padding:20px 16px 56px}.grid,.row2{grid-template-columns:1fr}.hero{gap:28px}.foot{flex-direction:column}}
-</style>
-</head>
-<body><main>
-<nav class="nav"><div class="brand"><span class="mark" aria-hidden="true">S</span><span>SENTINELMESH</span></div><div class="links"><a href="https://github.com/nihalmachhi/SentinelMesh">Source on GitHub ↗</a></div></nav>
-<section class="hero"><div><div class="eyebrow">Defensive network-flow lab</div><h1>Read the signal.<br><span style="color:var(--mint)">Keep the evidence.</span></h1><p>SentinelMesh turns prepared flow metadata into explainable findings and evidence-linked stories, so an analyst can review why a signal appeared.</p><div class="actions"><a class="button primary" href="https://github.com/nihalmachhi/SentinelMesh">Explore the project</a><a class="button" href="https://github.com/nihalmachhi/SentinelMesh#quick-start">Quick start</a></div></div>
-<div class="diagram" aria-label="SentinelMesh analysis flow"><small>One local investigation path</small><div class="flow"><div class="node"><b>01 · Prepared flow records</b><span>JSON, Zeek conn.log, or normalized CSV</span></div><div class="arrow">↓</div><div class="row2"><div class="node"><b>02 · Validate</b><span>Bounded, typed, UTC-normalized</span></div><div class="node"><b>03 · Detect</b><span>Explainable, contextual signals</span></div></div><div class="arrow">↓</div><div class="node"><b>04 · Correlate evidence</b><span>Stable incidents with flow IDs</span></div><div class="arrow">↓</div><div class="node"><b>05 · Human review</b><span>Local dashboard · simulated decisions</span></div></div></div></section>
-<section class="section"><div class="eyebrow">Designed for review</div><h2>Make every alert traceable</h2><p>Each finding retains the records and observed values behind its rule. Candidate mappings and anomaly scores remain hypotheses until a person checks the context.</p><div class="grid"><article class="card"><span class="num">SIGNALS</span><h3>Explainable rules</h3><p>Port diversity, unusually large transfers, host baselines, and periodic connection timing.</p></article><article class="card"><span class="num">STORIES</span><h3>Evidence correlation</h3><p>Join related findings by endpoints and event windows; inspect a bounded host graph when the optional extra is installed.</p></article><article class="card"><span class="num">BOUNDARIES</span><h3>Local by default</h3><p>Loopback API, per-run analyst token, append-only audit chain, and no live capture or response control.</p></article></div></section>
-<section class="section"><div class="eyebrow">Try it locally</div><h2>A small, reproducible lab</h2><p>Python 3.11+; optional public-data evaluation, host graphs, and LLM-assisted reports are clearly separated from the offline sample. A seeded generator creates 600 synthetic records with benign and labeled lab scenarios. Generated records stay out of Git.</p><div class="card"><code>python -m pip install -e ".[dev]"<br>python scripts/generate_sample_data.py<br>python -m sentinelmesh.cli analyze<br>python -m sentinelmesh.cli serve</code></div><div style="margin-top:16px"><span class="tag">Python</span><span class="tag">SQLite</span><span class="tag">Explainable rules</span><span class="tag">Offline sample</span></div></section>
-<section class="section"><div class="safety"><strong>Safety note</strong><br>SentinelMesh is an educational defensive prototype. Synthetic signals are not real-world detection results, ATT&amp;CK tags are contextual candidates, and simulated actions never change a network.</div></section>
-<footer class="foot"><span>SentinelMesh · Local defensive investigation demo</span><span><a href="https://github.com/nihalmachhi/SentinelMesh">GitHub ↗</a></span></footer>
-</main></body></html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c0d0f" />
+    <meta
+      name="description"
+      content="SentinelMesh is an evidence-first, local network-flow investigation lab."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="SentinelMesh — Evidence first. Human reviewed."
+    />
+    <meta
+      property="og:description"
+      content="A safe, local network-flow investigation lab for explainable network-flow review."
+    />
+    <meta
+      property="og:url"
+      content="https://nihalmachhi.github.io/SentinelMesh/"
+    />
+    <meta
+      property="og:image"
+      content="https://nihalmachhi.github.io/SentinelMesh/og-image.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="SentinelMesh — Evidence first. Human reviewed."
+    />
+    <meta
+      name="twitter:description"
+      content="A safe, local network-flow investigation lab."
+    />
+    <meta
+      name="twitter:image"
+      content="https://nihalmachhi.github.io/SentinelMesh/og-image.png"
+    />
+    <link rel="canonical" href="https://nihalmachhi.github.io/SentinelMesh/" />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <title>SentinelMesh — Evidence first. Human reviewed.</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="root"></div>
+    <script type="module" src="./src/main.jsx"></script>
+  </body>
+</html>

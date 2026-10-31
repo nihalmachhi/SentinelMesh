@@ -1,5 +1,7 @@
 # SentinelMesh
 
+<p align="center"><img src="assets/readme-icon.png" alt="SentinelMesh logo" width="144"></p>
+
 SentinelMesh is a local defensive network-flow triage lab that validates flow metadata, creates evidence-linked findings, and supports analyst review without taking network actions.
 
 ## Why it exists
