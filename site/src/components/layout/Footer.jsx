@@ -1,4 +1,5 @@
 import { REPO } from "./Header.jsx";
+import Wordmark from "./Wordmark.jsx";
 const BASE = import.meta.env.BASE_URL;
 
 export default function Footer() {
@@ -108,9 +109,7 @@ export default function Footer() {
                         </span>
                         <span>Python · SQLite · React</span>
                     </div>
-                    <div className="mark" aria-hidden="true">
-                        SentinelMesh
-                    </div>
+                    <Wordmark />
                 </div>
             </div>
         </footer>

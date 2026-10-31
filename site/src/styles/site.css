@@ -585,16 +585,37 @@ a {
   padding: 0;
 }
 .feed li {
+  display: block;
+  min-width: 0;
+}
+.feed .flow-select {
   display: grid;
+  width: 100%;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   gap: 2px 8px;
   padding: 7px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.feed .flow-select:hover,
+.feed li.selected .flow-select {
+  background: color-mix(in srgb, var(--u-acc) 8%, transparent);
+}
+.feed .flow-select:focus-visible {
+  outline: 2px solid var(--u-acc);
+  outline-offset: 2px;
+}
+.feed li {
   border-top: 1px solid var(--u-line);
   font-family: var(--f-mono);
   font-size: 0.72rem;
-  min-width: 0;
 }
-.feed li > * {
+.feed .flow-select > * {
   min-width: 0;
 }
 .feed li:first-child {
@@ -1342,7 +1363,7 @@ a {
 }
 
 @media (max-width: 420px) {
-  .feed li {
+  .feed .flow-select {
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 4px 8px;
   }
