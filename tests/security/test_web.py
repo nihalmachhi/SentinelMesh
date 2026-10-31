@@ -183,3 +183,12 @@ def test_route_table_serves_version_assets_and_strict_csp():
     assert web.resolve_route("PATCH", "/api/version") is None
     assert "unsafe-inline" not in web.CONTENT_SECURITY_POLICY
     assert "/static/app.js" in routes.STATIC
+
+
+def test_session_route_requires_a_valid_bearer_token():
+    handler = web.create_handler("session-secret")
+    denied = request(handler, path="/api/session", token=None, body=b"{}")
+    assert denied[1] == 403
+    accepted = request(handler, path="/api/session", token="session-secret", body=b"{}")
+    assert accepted[1] == 200
+    assert accepted[0] == {"status": "authorized"}

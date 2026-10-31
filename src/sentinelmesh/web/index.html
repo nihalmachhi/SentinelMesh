@@ -1,2 +1,29 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>SentinelMesh dashboard</title><link rel="stylesheet" href="/static/styles.css"><script defer src="/static/app.js"></script></head><body><main id="app" aria-live="polite"><p>Loading SentinelMesh…</p></main></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Local SentinelMesh network-flow investigation dashboard">
+  <title>SentinelMesh · Investigation</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script defer src="/static/app.js"></script>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#main" aria-label="SentinelMesh home"><span class="brand-mark" aria-hidden="true">S</span><span>SENTINELMESH</span></a>
+      <div class="top-status"><span class="health-dot" id="health-dot"></span><span id="health-status" role="status">Connecting…</span><span class="version" id="version"></span></div>
+      <div class="header-actions"><button class="icon-button" id="theme-toggle" type="button" aria-label="Switch color theme">◐</button><form id="token-form" class="token-form"><label class="visually-hidden" for="token-input">Local analyst bearer token</label><input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste local token"><button type="submit" id="token-submit">Unlock</button></form><span class="mode-pill" id="mode-pill">Viewer</span></div>
+    </header>
+    <main id="main" class="main-content">
+      <section class="intro"><div><p class="eyebrow">LOCAL INVESTIGATION · SYNTHETIC TELEMETRY</p><h1>Evidence, in context.</h1><p class="intro-copy">Review explainable network-flow findings and the records behind them.</p></div><button class="refresh-button" id="refresh-button" type="button">Refresh data</button></section>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section class="stats-grid" id="summary-panel" aria-label="Investigation summary" aria-busy="true"><div class="stat-card"><span>Flows</span><strong id="flow-count">—</strong></div><div class="stat-card"><span>Findings</span><strong id="finding-count">—</strong></div><div class="stat-card"><span>Incidents</span><strong id="incident-count">—</strong></div><div class="stat-card"><span>Reports</span><strong id="report-count">—</strong></div></section>
+      <section class="panel" aria-labelledby="incidents-title"><div class="panel-heading"><div><p class="eyebrow">CORRELATED SIGNALS</p><h2 id="incidents-title">Incidents</h2></div><span id="incident-count-label" class="subtle">Loading…</span></div><p id="incident-state" class="panel-state" role="status">Loading incidents…</p><div class="table-scroll"><table id="incident-table" hidden><thead><tr><th><button class="sort-button" data-sort="incident_id" type="button">Incident <span></span></button></th><th><button class="sort-button" data-sort="severity" type="button">Severity <span></span></button></th><th><button class="sort-button" data-sort="host" type="button">Host <span></span></button></th><th>Findings</th><th><button class="sort-button" data-sort="status" type="button">Status <span></span></button></th></tr></thead><tbody></tbody></table></div></section>
+      <section class="panel" aria-labelledby="findings-title"><div class="panel-heading"><div><p class="eyebrow">RULE OUTPUT</p><h2 id="findings-title">Findings</h2></div><span id="finding-count-label" class="subtle">Loading…</span></div><p id="finding-state" class="panel-state" role="status">Loading findings…</p><div class="table-scroll"><table id="finding-table" hidden><thead><tr><th><button class="sort-button" data-sort="rule_id" type="button">Rule <span></span></button></th><th><button class="sort-button" data-sort="severity" type="button">Severity <span></span></button></th><th><button class="sort-button" data-sort="title" type="button">Signal <span></span></button></th><th>Evidence</th></tr></thead><tbody></tbody></table></div></section>
+    </main>
+    <div class="drawer-backdrop" id="drawer-backdrop" hidden></div><aside class="evidence-drawer" id="evidence-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden><div class="drawer-heading"><div><p class="eyebrow">SELECTED EVIDENCE</p><h2 id="drawer-title">Investigation detail</h2></div><button class="icon-button" id="drawer-close" type="button" aria-label="Close evidence drawer">×</button></div><div id="drawer-content" class="drawer-content"></div><div class="drawer-actions"><button id="investigate-button" class="primary-button" type="button" disabled>Generate investigation report</button><p id="analyst-note" class="subtle">Enter the local token to enable analyst actions.</p></div></aside>
+  </div>
+</body>
+</html>

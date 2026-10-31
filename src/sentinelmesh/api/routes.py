@@ -102,6 +102,11 @@ def incident(request: Any, match: Match[str], body: Any) -> None:
     request.reply(item or {"error": "incident not found"}, 200 if item else 404)
 
 
+def session(request: Any, match: Match[str], body: Any) -> None:
+    """Successful token authorization acknowledges analyst mode for this run."""
+    request.reply({"status": "authorized"})
+
+
 def analyze(request: Any, match: Match[str], body: Any) -> None:
     flow_items = parse_flows(body)
     started = time.perf_counter()
@@ -142,6 +147,7 @@ ROUTES: dict[str, tuple[tuple[re.Pattern[str], Endpoint], ...]] = {
         (re.compile(r"^/api/incidents/(.+)$"), incident),
     ),
     "POST": (
+        (re.compile(r"^/api/session$"), session),
         (re.compile(r"^/api/analyze$"), analyze),
         (re.compile(r"^/api/incidents/(.+)/investigate$"), investigate_incident),
         (re.compile(r"^/api/incidents/(.+)/simulate$"), simulate_incident),
