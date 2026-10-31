@@ -4,7 +4,7 @@ import ipaddress
 import json
 import math
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from sentinelmesh.core.config import MAX_IMPORT_BYTES
 from sentinelmesh.core.models import Flow
@@ -52,7 +52,7 @@ def parse_flow(item: Any) -> Flow:
         value = item[field]
         if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
             raise ValueError(f"{field} must be an integer in [{minimum}, {maximum}]")
-        return cast(int, value)
+        return value
 
     duration = item["duration_ms"]
     if (
