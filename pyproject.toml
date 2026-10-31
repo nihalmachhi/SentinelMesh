@@ -16,7 +16,7 @@ sentinelmesh = "sentinelmesh.cli:main"
 where = ["src"]
 
 [project.optional-dependencies]
-dev = ["mypy>=1.10", "pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6"]
+dev = ["mypy>=1.10", "pytest>=8.0", "pytest-cov>=7.1.0", "ruff>=0.6"]
 ml = ["scikit-learn>=1.5"]
 graph = ["networkx>=3.4"]
 
