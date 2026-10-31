@@ -128,7 +128,7 @@ export default function Simulator({ sim }) {
                                 </div>
                                 <div>
                                     <dt>Rule</dt>
-                                    <dd>{sim.selected.rule_id}</dd>
+                                    <dd>{snapshot.selected.rule_id}</dd>
                                 </div>
                             </dl>
                         </div>
